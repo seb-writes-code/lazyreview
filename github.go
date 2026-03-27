@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -157,6 +158,23 @@ func checkoutPR(pr PullRequest) error {
 		return fmt.Errorf("checkout failed: %s\n%s", err, string(out))
 	}
 	return nil
+}
+
+// editorCmd returns the user's preferred editor command.
+func editorCmd() string {
+	if e := os.Getenv("VISUAL"); e != "" {
+		return e
+	}
+	if e := os.Getenv("EDITOR"); e != "" {
+		return e
+	}
+	return "vi"
+}
+
+// editorProcess returns an *exec.Cmd that opens the editor in the current directory.
+func editorProcess() *exec.Cmd {
+	editor := editorCmd()
+	return exec.Command(editor, ".")
 }
 
 // openInBrowser opens the PR URL in the default browser.
