@@ -42,6 +42,8 @@ type AppState =
       current: number;
       lines: string[];
       scrollOffset: number;
+      searchTerm?: string;
+      searchInput?: string;
     }
   | {
       phase: "body";
@@ -56,6 +58,20 @@ type AppState =
       current: number;
       strategy: "merge" | "squash" | "rebase";
     };
+
+function findMatch(lines: string[], term: string, start: number, forward: boolean): number {
+  const lower = term.toLowerCase();
+  if (forward) {
+    for (let i = start + 1; i < lines.length; i++) {
+      if (lines[i].toLowerCase().includes(lower)) return i;
+    }
+  } else {
+    for (let i = start - 1; i >= 0; i--) {
+      if (lines[i].toLowerCase().includes(lower)) return i;
+    }
+  }
+  return -1;
+}
 
 export function App({ filters }: { filters?: Filters }) {
   const { exit } = useApp();
@@ -172,9 +188,45 @@ export function App({ filters }: { filters?: Filters }) {
       return;
     }
 
+    // Handle diff search input mode
+    if (state.phase === "diff" && state.searchInput !== undefined) {
+      if (key.escape) {
+        setState({ ...state, searchInput: undefined });
+        return;
+      }
+      if (key.return) {
+        const term = state.searchInput;
+        if (!term) {
+          setState({ ...state, searchInput: undefined });
+          return;
+        }
+        const match = findMatch(state.lines, term, state.scrollOffset, true);
+        setState({
+          ...state,
+          searchTerm: term,
+          searchInput: undefined,
+          scrollOffset: match !== -1 ? match : state.scrollOffset,
+        });
+        return;
+      }
+      if (key.backspace || key.delete) {
+        setState({ ...state, searchInput: state.searchInput.slice(0, -1) });
+        return;
+      }
+      if (input && !key.ctrl && !key.meta) {
+        setState({ ...state, searchInput: state.searchInput + input });
+        return;
+      }
+      return;
+    }
+
     // Handle scrollable views (diff and body)
     if (state.phase === "diff" || state.phase === "body") {
       if (key.escape || input === "q") {
+        if (state.phase === "diff" && state.searchTerm) {
+          setState({ ...state, searchTerm: undefined });
+          return;
+        }
         setState({
           phase: "reviewing",
           prs: state.prs,
@@ -242,6 +294,20 @@ export function App({ filters }: { filters?: Filters }) {
           if (prev !== -1) {
             setState({ ...state, scrollOffset: prev });
           }
+          return;
+        }
+        if (input === "/") {
+          setState({ ...state, searchInput: "" });
+          return;
+        }
+        if (input === "n" && state.searchTerm) {
+          const match = findMatch(state.lines, state.searchTerm, state.scrollOffset, true);
+          if (match !== -1) setState({ ...state, scrollOffset: match });
+          return;
+        }
+        if (input === "N" && state.searchTerm) {
+          const match = findMatch(state.lines, state.searchTerm, state.scrollOffset, false);
+          if (match !== -1) setState({ ...state, scrollOffset: match });
           return;
         }
       }
@@ -509,6 +575,8 @@ export function App({ filters }: { filters?: Filters }) {
           pr={state.prs[state.current]}
           lines={state.lines}
           scrollOffset={state.scrollOffset}
+          searchTerm={state.searchTerm}
+          searchInput={state.searchInput}
         />
       );
     case "body":

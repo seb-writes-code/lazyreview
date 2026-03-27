@@ -304,10 +304,14 @@ export function DiffView({
   pr,
   lines,
   scrollOffset,
+  searchTerm,
+  searchInput,
 }: {
   pr: PullRequest;
   lines: string[];
   scrollOffset: number;
+  searchTerm?: string;
+  searchInput?: string;
 }) {
   const viewportHeight = Math.max(process.stdout.rows - 6, 10);
   const clampedOffset = Math.min(scrollOffset, Math.max(0, lines.length - viewportHeight));
@@ -340,13 +344,21 @@ export function DiffView({
         </Text>
       </Box>
 
-      {totalFiles > 0 && (
-        <Box gap={1} marginBottom={1}>
-          <Text dimColor>file</Text>
-          <Text color="yellow">{currentFileIdx + 1}/{totalFiles}</Text>
-          <Text color="blue">{currentFileName}</Text>
-        </Box>
-      )}
+      <Box gap={1} marginBottom={1}>
+        {totalFiles > 0 && (
+          <>
+            <Text dimColor>file</Text>
+            <Text color="yellow">{currentFileIdx + 1}/{totalFiles}</Text>
+            <Text color="blue">{currentFileName}</Text>
+          </>
+        )}
+        {searchTerm && (
+          <>
+            <Text dimColor>search:</Text>
+            <Text color="yellow">"{searchTerm}"</Text>
+          </>
+        )}
+      </Box>
 
       <Box flexDirection="column">
         {visibleLines.map((line, i) => (
@@ -358,11 +370,19 @@ export function DiffView({
         ))}
       </Box>
 
-      <Box marginTop={1}>
-        <Text dimColor>
-          j/k scroll • space page down • ]/[ next/prev file • g top • G bottom • esc back
-        </Text>
-      </Box>
+      {searchInput !== undefined ? (
+        <Box marginTop={1}>
+          <Text color="cyan">/ </Text>
+          <Text>{searchInput}</Text>
+          <Text dimColor>▎</Text>
+        </Box>
+      ) : (
+        <Box marginTop={1}>
+          <Text dimColor>
+            j/k scroll • space page down • ]/[ next/prev file • / search{searchTerm ? " • n/N next/prev match" : ""} • g top • G bottom • esc {searchTerm ? "clear search" : "back"}
+          </Text>
+        </Box>
+      )}
     </Box>
   );
 }
