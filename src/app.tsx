@@ -211,6 +211,40 @@ export function App({ filters }: { filters?: Filters }) {
         });
         return;
       }
+      // File navigation (diff only)
+      if (state.phase === "diff") {
+        if (input === "]") {
+          const next = state.lines.findIndex(
+            (l, i) => i > state.scrollOffset && l.startsWith("diff --git")
+          );
+          setState({
+            ...state,
+            scrollOffset: next !== -1 ? next : 0,
+          });
+          return;
+        }
+        if (input === "[") {
+          let prev = -1;
+          for (let i = state.scrollOffset - 1; i >= 0; i--) {
+            if (state.lines[i].startsWith("diff --git")) {
+              prev = i;
+              break;
+            }
+          }
+          if (prev === -1) {
+            for (let i = state.lines.length - 1; i >= 0; i--) {
+              if (state.lines[i].startsWith("diff --git")) {
+                prev = i;
+                break;
+              }
+            }
+          }
+          if (prev !== -1) {
+            setState({ ...state, scrollOffset: prev });
+          }
+          return;
+        }
+      }
       return;
     }
 

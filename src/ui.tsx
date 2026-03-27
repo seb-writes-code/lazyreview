@@ -294,6 +294,11 @@ function diffLineColor(line: string): "green" | "red" | "cyan" | "white" {
   return "white";
 }
 
+function extractFileName(diffLine: string): string {
+  const match = diffLine.match(/^diff --git a\/(.+?) b\//);
+  return match ? match[1] : "unknown";
+}
+
 export function DiffView({
   pr,
   lines,
@@ -303,13 +308,28 @@ export function DiffView({
   lines: string[];
   scrollOffset: number;
 }) {
-  const viewportHeight = Math.max(process.stdout.rows - 5, 10);
+  const viewportHeight = Math.max(process.stdout.rows - 6, 10);
   const clampedOffset = Math.min(scrollOffset, Math.max(0, lines.length - viewportHeight));
   const visibleLines = lines.slice(clampedOffset, clampedOffset + viewportHeight);
 
+  // Compute file navigation info
+  const fileIndices = lines.reduce<number[]>((acc, l, i) => {
+    if (l.startsWith("diff --git")) acc.push(i);
+    return acc;
+  }, []);
+  const totalFiles = fileIndices.length;
+  let currentFileIdx = 0;
+  for (let i = fileIndices.length - 1; i >= 0; i--) {
+    if (fileIndices[i] <= clampedOffset) {
+      currentFileIdx = i;
+      break;
+    }
+  }
+  const currentFileName = totalFiles > 0 ? extractFileName(lines[fileIndices[currentFileIdx]]) : null;
+
   return (
     <Box flexDirection="column" paddingX={1}>
-      <Box gap={1} marginBottom={1}>
+      <Box gap={1} marginBottom={0}>
         <Text bold color="cyan">
           #{pr.number}
         </Text>
@@ -318,6 +338,14 @@ export function DiffView({
           — line {clampedOffset + 1}/{lines.length}
         </Text>
       </Box>
+
+      {totalFiles > 0 && (
+        <Box gap={1} marginBottom={1}>
+          <Text dimColor>file</Text>
+          <Text color="yellow">{currentFileIdx + 1}/{totalFiles}</Text>
+          <Text color="blue">{currentFileName}</Text>
+        </Box>
+      )}
 
       <Box flexDirection="column">
         {visibleLines.map((line, i) => (
@@ -331,7 +359,7 @@ export function DiffView({
 
       <Box marginTop={1}>
         <Text dimColor>
-          j/k scroll • space page down • g top • G bottom • esc back
+          j/k scroll • space page down • ]/[ next/prev file • g top • G bottom • esc back
         </Text>
       </Box>
     </Box>
