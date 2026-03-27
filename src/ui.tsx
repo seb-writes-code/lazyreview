@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Text } from "ink";
-import type { PullRequest } from "./types.js";
+import type { PullRequest, Filters } from "./types.js";
 
 function timeAgo(dateStr: string): string {
   const seconds = Math.floor(
@@ -111,22 +111,39 @@ function ReviewList({ reviews }: { reviews: PullRequest["reviews"] }) {
   );
 }
 
+function FilterBar({ filters }: { filters?: Filters }) {
+  const parts: string[] = [];
+  if (filters?.repo) parts.push(`repo:${filters.repo}`);
+  if (filters?.author) parts.push(`author:${filters.author}`);
+  if (filters?.noDrafts) parts.push("no-drafts");
+  if (parts.length === 0) return null;
+  return (
+    <Box gap={1}>
+      <Text dimColor>filters:</Text>
+      <Text color="yellow">{parts.join(" ")}</Text>
+    </Box>
+  );
+}
+
 export function PRContext({
   pr,
   index,
   total,
+  filters,
 }: {
   pr: PullRequest;
   index: number;
   total: number;
+  filters?: Filters;
 }) {
   return (
     <Box flexDirection="column" paddingX={1}>
       {/* Header with counter */}
-      <Box marginBottom={1}>
+      <Box marginBottom={1} gap={2}>
         <Text dimColor>
           Review {index + 1} of {total}
         </Text>
+        <FilterBar filters={filters} />
       </Box>
 
       {/* Title and number */}

@@ -1,6 +1,6 @@
 import { execFile, spawnSync } from "node:child_process";
 import { promisify } from "node:util";
-import type { PullRequest } from "./types.js";
+import type { PullRequest, Filters } from "./types.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -73,13 +73,32 @@ export function checkAuth(): { authenticated: boolean; user?: string } {
   }
 }
 
-export async function fetchReviewRequests(): Promise<PullRequest[]> {
+function buildSearchQuery(filters?: Filters): string {
+  let q = "type:pr state:open review-requested:@me archived:false";
+  if (filters?.repo) {
+    q += ` repo:${filters.repo}`;
+  }
+  if (filters?.author) {
+    q += ` author:${filters.author}`;
+  }
+  if (filters?.noDrafts) {
+    q += ` draft:false`;
+  }
+  return q;
+}
+
+export async function fetchReviewRequests(filters?: Filters): Promise<PullRequest[]> {
   const allPRs: PullRequest[] = [];
   let cursor: string | null = null;
+  const searchQuery = buildSearchQuery(filters);
 
   // Paginate through all results
   do {
-    const args = ["api", "graphql", "-f", `query=${REVIEW_REQUESTS_QUERY}`];
+    const query = REVIEW_REQUESTS_QUERY.replace(
+      'query: "type:pr state:open review-requested:@me archived:false"',
+      `query: "${searchQuery}"`
+    );
+    const args = ["api", "graphql", "-f", `query=${query}`];
     if (cursor) {
       args.push("-f", `cursor=${cursor}`);
     }

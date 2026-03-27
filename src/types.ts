@@ -18,6 +18,12 @@ export interface PullRequest {
   checkStatus: "SUCCESS" | "FAILURE" | "PENDING" | "ERROR" | null;
 }
 
+export interface Filters {
+  repo?: string;
+  author?: string;
+  noDrafts?: boolean;
+}
+
 export interface Review {
   author: string;
   state: string;

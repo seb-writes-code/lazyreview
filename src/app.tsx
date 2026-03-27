@@ -13,7 +13,7 @@ import {
   checkoutAndOpenEditor,
   checkoutAndLaunchClaude,
 } from "./github.js";
-import type { PullRequest } from "./types.js";
+import type { PullRequest, Filters } from "./types.js";
 
 type AppState =
   | { phase: "loading" }
@@ -50,7 +50,7 @@ type AppState =
       scrollOffset: number;
     };
 
-export function App() {
+export function App({ filters }: { filters?: Filters }) {
   const { exit } = useApp();
   const [state, setState] = useState<AppState>({ phase: "loading" });
 
@@ -61,7 +61,7 @@ export function App() {
       return;
     }
 
-    fetchReviewRequests()
+    fetchReviewRequests(filters)
       .then((prs) => {
         if (prs.length === 0) {
           setState({ phase: "empty" });
@@ -255,7 +255,7 @@ export function App() {
 
     if (input === "r") {
       setState({ phase: "loading" });
-      fetchReviewRequests()
+      fetchReviewRequests(filters)
         .then((prs) => {
           if (prs.length === 0) {
             setState({ phase: "empty" });
@@ -402,6 +402,7 @@ export function App() {
             pr={state.prs[state.current]}
             index={state.current}
             total={state.prs.length}
+            filters={filters}
           />
           <Box marginTop={1}>
             <Text bold color="cyan">
@@ -437,6 +438,7 @@ export function App() {
           pr={state.prs[state.current]}
           index={state.current}
           total={state.prs.length}
+          filters={filters}
         />
       );
   }
