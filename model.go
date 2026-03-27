@@ -30,6 +30,7 @@ type actionDoneMsg struct {
 	message string
 	advance bool // whether to advance to the next PR after dismissal
 }
+type launchClaudeMsg struct{ pr PullRequest }
 
 // Styles
 var (
@@ -140,6 +141,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.state = stateActionDone
 		return m, nil
 
+	case launchClaudeMsg:
+		c := claudeCodeProcess(msg.pr)
+		return m, tea.ExecProcess(c, func(err error) tea.Msg {
+			if err != nil {
+				return errMsg{err}
+			}
+			return actionDoneMsg{fmt.Sprintf("Claude Code session ended for %s#%d", msg.pr.Repo, msg.pr.Number), false}
+		})
+
 	case spinner.TickMsg:
 		var cmd tea.Cmd
 		m.spinner, cmd = m.spinner.Update(msg)
@@ -216,6 +226,15 @@ func (m model) updateReview(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return errMsg{err}
 				}
 				return actionDoneMsg{fmt.Sprintf("Checked out %s#%d → %s", pr.Repo, pr.Number, pr.HeadRef), false}
+			}
+		case "l":
+			pr := m.currentPR()
+			m.state = stateLoading
+			return m, func() tea.Msg {
+				if err := checkoutPR(pr); err != nil {
+					return errMsg{err}
+				}
+				return launchClaudeMsg{pr}
 			}
 		}
 	}
@@ -376,7 +395,7 @@ func (m model) viewReview() string {
 	b.WriteString("\n")
 
 	// Actions
-	b.WriteString("  " + helpStyle.Render("a approve • c comment • x request changes • k checkout • s skip • o open in browser • q quit") + "\n")
+	b.WriteString("  " + helpStyle.Render("a approve • c comment • x request changes • k checkout • l claude code • s skip • o open • q quit") + "\n")
 
 	return b.String()
 }

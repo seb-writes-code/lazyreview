@@ -159,6 +159,27 @@ func checkoutPR(pr PullRequest) error {
 	return nil
 }
 
+// claudeCodeProcess returns an *exec.Cmd that launches an interactive Claude Code session
+// with context about the given pull request.
+func claudeCodeProcess(pr PullRequest) *exec.Cmd {
+	prompt := fmt.Sprintf(
+		"You are helping review a GitHub pull request.\n\n"+
+			"PR: %s\n"+
+			"Repo: %s\n"+
+			"Author: %s\n"+
+			"Branch: %s → %s\n"+
+			"URL: %s\n"+
+			"Changes: +%d -%d\n\n"+
+			"Use `gh pr diff %d --repo %s` to examine the diff and help the user review this PR.",
+		pr.Title, pr.Repo, pr.Author,
+		pr.HeadRef, pr.BaseRef, pr.URL,
+		pr.Additions, pr.Deletions,
+		pr.Number, pr.Repo,
+	)
+
+	return exec.Command("claude", "--prompt", prompt)
+}
+
 // openInBrowser opens the PR URL in the default browser.
 func openInBrowser(pr PullRequest) error {
 	cmd := exec.Command("gh", "pr", "view", fmt.Sprintf("%d", pr.Number),
