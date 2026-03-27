@@ -182,6 +182,20 @@ export async function requestChanges(
   );
 }
 
+export async function mergePR(
+  pr: PullRequest,
+  strategy: "merge" | "squash" | "rebase"
+): Promise<void> {
+  await gh(
+    "pr",
+    "merge",
+    String(pr.number),
+    "--repo",
+    pr.repository,
+    `--${strategy}`
+  );
+}
+
 export function openInBrowser(pr: PullRequest): void {
   spawnSync("gh", ["pr", "view", String(pr.number), "--repo", pr.repository, "--web"], {
     stdio: "ignore",

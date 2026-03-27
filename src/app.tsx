@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text, useApp, useInput } from "ink";
-import { PRContext, Loading, Empty, AuthError, ActionStatus, DiffView, BodyView } from "./ui.js";
+import { PRContext, Loading, Empty, AuthError, ActionStatus, DiffView, BodyView, MergeConfirm } from "./ui.js";
 import {
   checkAuth,
   fetchReviewRequests,
@@ -12,6 +12,7 @@ import {
   openInBrowser,
   checkoutAndOpenEditor,
   checkoutAndLaunchClaude,
+  mergePR,
 } from "./github.js";
 import type { PullRequest, Filters } from "./types.js";
 
@@ -48,6 +49,12 @@ type AppState =
       current: number;
       lines: string[];
       scrollOffset: number;
+    }
+  | {
+      phase: "merge_confirm";
+      prs: PullRequest[];
+      current: number;
+      strategy: "merge" | "squash" | "rebase";
     };
 
 export function App({ filters }: { filters?: Filters }) {
@@ -207,6 +214,43 @@ export function App({ filters }: { filters?: Filters }) {
       return;
     }
 
+    // Handle merge confirmation
+    if (state.phase === "merge_confirm") {
+      if (key.escape) {
+        setState({
+          phase: "reviewing",
+          prs: state.prs,
+          current: state.current,
+        });
+        return;
+      }
+      if (input === "1") {
+        setState({ ...state, strategy: "merge" });
+        return;
+      }
+      if (input === "2") {
+        setState({ ...state, strategy: "squash" });
+        return;
+      }
+      if (input === "3") {
+        setState({ ...state, strategy: "rebase" });
+        return;
+      }
+      if (key.return) {
+        const pr = state.prs[state.current];
+        runAction(
+          pr,
+          state.prs,
+          state.current,
+          () => mergePR(pr, state.strategy),
+          `Merged ${pr.repository}#${pr.number} (${state.strategy})`,
+          true
+        );
+        return;
+      }
+      return;
+    }
+
     // Handle action done screen
     if (state.phase === "action") {
       if (input === "q") {
@@ -344,6 +388,15 @@ export function App({ filters }: { filters?: Filters }) {
       });
     }
 
+    if (input === "m") {
+      setState({
+        phase: "merge_confirm",
+        prs: state.prs,
+        current: state.current,
+        strategy: "squash",
+      });
+    }
+
     if (input === "o") {
       openInBrowser(pr);
     }
@@ -430,6 +483,13 @@ export function App({ filters }: { filters?: Filters }) {
           pr={state.prs[state.current]}
           lines={state.lines}
           scrollOffset={state.scrollOffset}
+        />
+      );
+    case "merge_confirm":
+      return (
+        <MergeConfirm
+          pr={state.prs[state.current]}
+          strategy={state.strategy}
         />
       );
     case "reviewing":

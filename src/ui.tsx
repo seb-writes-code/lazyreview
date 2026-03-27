@@ -214,7 +214,60 @@ export function PRContext({
       {/* Actions help */}
       <Box marginTop={1}>
         <Text dimColor>
-          a approve • b body • c comment • x request changes • d diff • k checkout • e editor • l claude • r refresh • s skip • o open • q quit
+          a approve • m merge • b body • c comment • x request changes • d diff • k checkout • e editor • l claude • r refresh • s skip • o open • q quit
+        </Text>
+      </Box>
+    </Box>
+  );
+}
+
+export function MergeConfirm({
+  pr,
+  strategy,
+}: {
+  pr: PullRequest;
+  strategy: "merge" | "squash" | "rebase";
+}) {
+  const strategies = ["merge", "squash", "rebase"] as const;
+  const ciWarning =
+    pr.checkStatus === "FAILURE" || pr.checkStatus === "ERROR"
+      ? "⚠ CI is failing"
+      : pr.checkStatus === "PENDING"
+        ? "⚠ CI is pending"
+        : null;
+
+  return (
+    <Box flexDirection="column" paddingX={1}>
+      <Box gap={1} marginBottom={1}>
+        <Text bold color="cyan">
+          Merge #{pr.number}
+        </Text>
+        <Text bold>{pr.title}</Text>
+      </Box>
+
+      <Box gap={1}>
+        <Text dimColor>repo:</Text>
+        <Text color="blue">{pr.repository}</Text>
+      </Box>
+
+      {ciWarning && (
+        <Box marginTop={1}>
+          <Text color="yellow">{ciWarning}</Text>
+        </Box>
+      )}
+
+      <Box marginTop={1} gap={1}>
+        <Text dimColor>strategy:</Text>
+        {strategies.map((s, i) => (
+          <Text key={s} color={s === strategy ? "green" : undefined} bold={s === strategy}>
+            {i + 1}) {s}{s === strategy ? " ✓" : ""}
+          </Text>
+        ))}
+      </Box>
+
+      <Box marginTop={1}>
+        <Text dimColor>
+          enter confirm • 1/2/3 strategy • esc cancel
         </Text>
       </Box>
     </Box>
