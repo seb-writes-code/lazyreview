@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { execFile, spawnSync } from "node:child_process";
 import { promisify } from "node:util";
 import type { PullRequest } from "./types.js";
 
@@ -100,6 +100,81 @@ export async function fetchReviewRequests(): Promise<PullRequest[]> {
   } while (cursor);
 
   return allPRs;
+}
+
+export async function checkoutPR(pr: PullRequest): Promise<void> {
+  await gh("pr", "checkout", String(pr.number), "--repo", pr.repository);
+}
+
+export async function approvePR(pr: PullRequest): Promise<void> {
+  await gh(
+    "pr",
+    "review",
+    String(pr.number),
+    "--repo",
+    pr.repository,
+    "--approve"
+  );
+}
+
+export async function commentOnPR(
+  pr: PullRequest,
+  body: string
+): Promise<void> {
+  await gh(
+    "pr",
+    "review",
+    String(pr.number),
+    "--repo",
+    pr.repository,
+    "--comment",
+    "--body",
+    body
+  );
+}
+
+export async function requestChanges(
+  pr: PullRequest,
+  body: string
+): Promise<void> {
+  await gh(
+    "pr",
+    "review",
+    String(pr.number),
+    "--repo",
+    pr.repository,
+    "--request-changes",
+    "--body",
+    body
+  );
+}
+
+export function openInBrowser(pr: PullRequest): void {
+  spawnSync("gh", ["pr", "view", String(pr.number), "--repo", pr.repository, "--web"], {
+    stdio: "ignore",
+  });
+}
+
+export async function checkoutAndOpenEditor(pr: PullRequest): Promise<void> {
+  await checkoutPR(pr);
+  const editor = process.env.VISUAL || process.env.EDITOR || "vi";
+  spawnSync(editor, ["."], { stdio: "inherit" });
+}
+
+export async function checkoutAndLaunchClaude(pr: PullRequest): Promise<void> {
+  await checkoutPR(pr);
+  const prompt = [
+    `You are helping review a GitHub pull request.`,
+    ``,
+    `PR: ${pr.title}`,
+    `Repo: ${pr.repository}`,
+    `Author: ${pr.author}`,
+    `URL: ${pr.url}`,
+    `Changes: +${pr.additions} -${pr.deletions} across ${pr.changedFiles} files`,
+    ``,
+    `Use \`gh pr diff ${pr.number} --repo ${pr.repository}\` to examine the diff and help the user review this PR.`,
+  ].join("\n");
+  spawnSync("claude", ["--prompt", prompt], { stdio: "inherit" });
 }
 
 function normalizePR(node: Record<string, unknown>): PullRequest {

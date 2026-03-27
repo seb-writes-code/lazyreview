@@ -173,6 +173,26 @@ export function PRContext({
       <Box marginTop={1}>
         <Text dimColor>{pr.url}</Text>
       </Box>
+
+      {/* Actions help */}
+      <Box marginTop={1}>
+        <Text dimColor>
+          a approve • c comment • x request changes • k checkout • e editor • l claude • s skip • o open • q quit
+        </Text>
+      </Box>
+    </Box>
+  );
+}
+
+export function ActionStatus({ message }: { message: string }) {
+  return (
+    <Box flexDirection="column" paddingX={1}>
+      <Box>
+        <Text color="green" bold>✓ {message}</Text>
+      </Box>
+      <Box marginTop={1}>
+        <Text dimColor>Press any key to continue • q quit</Text>
+      </Box>
     </Box>
   );
 }
