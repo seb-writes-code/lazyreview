@@ -33,3 +33,11 @@ export interface Review {
   state: string;
   submittedAt: string;
 }
+
+export interface SessionStats {
+  approved: number;
+  commented: number;
+  requestedChanges: number;
+  merged: number;
+  skipped: number;
+}

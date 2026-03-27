@@ -3,7 +3,7 @@ import React from "react";
 import { render } from "ink";
 import { parseArgs } from "node:util";
 import { App } from "./app.js";
-import type { Filters, SortField } from "./types.js";
+import type { Filters, SessionStats, SortField } from "./types.js";
 
 const VALID_SORTS: SortField[] = ["updated", "created", "size", "ci"];
 
@@ -45,4 +45,18 @@ const filters: Filters = {
   reverse: values.reverse,
 };
 
-render(<App filters={filters} />);
+const box: { stats: SessionStats | null } = { stats: null };
+const { waitUntilExit } = render(
+  <App filters={filters} onExit={(s) => { box.stats = s; }} />
+);
+await waitUntilExit();
+if (box.stats) {
+  const s = box.stats;
+  const parts: string[] = [];
+  if (s.approved) parts.push(`${s.approved} approved`);
+  if (s.commented) parts.push(`${s.commented} commented`);
+  if (s.requestedChanges) parts.push(`${s.requestedChanges} changes requested`);
+  if (s.merged) parts.push(`${s.merged} merged`);
+  if (s.skipped) parts.push(`${s.skipped} skipped`);
+  if (parts.length) console.log(`\nSession: ${parts.join(", ")}`);
+}

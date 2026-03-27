@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Box, Text, useApp, useInput } from "ink";
 import { PRContext, Loading, Empty, AuthError, ActionStatus, DiffView, BodyView, MergeConfirm } from "./ui.js";
 import {
@@ -14,7 +14,7 @@ import {
   checkoutAndLaunchClaude,
   mergePR,
 } from "./github.js";
-import type { PullRequest, Filters } from "./types.js";
+import type { PullRequest, Filters, SessionStats } from "./types.js";
 
 type AppState =
   | { phase: "loading" }
@@ -73,9 +73,10 @@ function findMatch(lines: string[], term: string, start: number, forward: boolea
   return -1;
 }
 
-export function App({ filters }: { filters?: Filters }) {
+export function App({ filters, onExit }: { filters?: Filters; onExit?: (stats: SessionStats) => void }) {
   const { exit } = useApp();
   const [state, setState] = useState<AppState>({ phase: "loading" });
+  const stats = useRef<SessionStats>({ approved: 0, commented: 0, requestedChanges: 0, merged: 0, skipped: 0 });
 
   useEffect(() => {
     const auth = checkAuth();
@@ -161,6 +162,11 @@ export function App({ filters }: { filters?: Filters }) {
           return;
         }
         const pr = state.prs[state.current];
+        if (state.action === "comment") {
+          stats.current.commented++;
+        } else {
+          stats.current.requestedChanges++;
+        }
         const fn =
           state.action === "comment"
             ? () => commentOnPR(pr, body)
@@ -338,6 +344,7 @@ export function App({ filters }: { filters?: Filters }) {
       }
       if (key.return) {
         const pr = state.prs[state.current];
+        stats.current.merged++;
         runAction(
           pr,
           state.prs,
@@ -354,6 +361,7 @@ export function App({ filters }: { filters?: Filters }) {
     // Handle action done screen
     if (state.phase === "action") {
       if (input === "q") {
+        onExit?.(stats.current);
         exit();
         return;
       }
@@ -370,6 +378,7 @@ export function App({ filters }: { filters?: Filters }) {
     }
 
     if (input === "q" || key.escape) {
+      onExit?.(stats.current);
       exit();
       return;
     }
@@ -394,6 +403,7 @@ export function App({ filters }: { filters?: Filters }) {
     }
 
     if (input === "s") {
+      stats.current.skipped++;
       advance(state.prs, state.current);
     }
 
@@ -416,6 +426,7 @@ export function App({ filters }: { filters?: Filters }) {
     }
 
     if (input === "a") {
+      stats.current.approved++;
       runAction(
         pr,
         state.prs,
