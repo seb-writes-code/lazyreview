@@ -22,19 +22,20 @@ export function App() {
       return;
     }
 
-    try {
-      const prs = fetchReviewRequests();
-      if (prs.length === 0) {
-        setState({ phase: "empty" });
-      } else {
-        setState({ phase: "reviewing", prs, current: 0 });
-      }
-    } catch (err) {
-      setState({
-        phase: "error",
-        message: err instanceof Error ? err.message : String(err),
+    fetchReviewRequests()
+      .then((prs) => {
+        if (prs.length === 0) {
+          setState({ phase: "empty" });
+        } else {
+          setState({ phase: "reviewing", prs, current: 0 });
+        }
+      })
+      .catch((err) => {
+        setState({
+          phase: "error",
+          message: err instanceof Error ? err.message : String(err),
+        });
       });
-    }
   }, []);
 
   useInput((input, key) => {
