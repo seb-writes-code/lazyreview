@@ -45,11 +45,17 @@ const filters: Filters = {
   reverse: values.reverse,
 };
 
+// Enter alternate screen buffer (like vim/less)
+process.stdout.write("\x1b[?1049h");
+
 const box: { stats: SessionStats | null } = { stats: null };
 const { waitUntilExit } = render(
   <App filters={filters} onExit={(s) => { box.stats = s; }} />
 );
 await waitUntilExit();
+
+// Leave alternate screen buffer
+process.stdout.write("\x1b[?1049l");
 if (box.stats) {
   const s = box.stats;
   const parts: string[] = [];

@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, Text } from "ink";
+import { Box, Text, useStdout } from "ink";
 import type { PullRequest, Filters } from "./types.js";
 
 function timeAgo(dateStr: string): string {
@@ -137,83 +137,88 @@ export function PRContext({
   total: number;
   filters?: Filters;
 }) {
+  const { stdout } = useStdout();
+  const height = stdout?.rows ?? 24;
+
   return (
-    <Box flexDirection="column" paddingX={1}>
-      {/* Header with counter */}
-      <Box marginBottom={1} gap={2}>
-        <Text dimColor>
-          Review {index + 1} of {total}
-        </Text>
-        <FilterBar filters={filters} />
-      </Box>
-
-      {/* Title and number */}
-      <Box gap={1}>
-        <Text bold color="cyan">
-          #{pr.number}
-        </Text>
-        <Text bold>{pr.title}</Text>
-        {pr.isDraft && <Text color="yellow">[DRAFT]</Text>}
-      </Box>
-
-      {/* Repository and author */}
-      <Box gap={1} marginTop={0}>
-        <Text dimColor>repo:</Text>
-        <Text color="blue">{pr.repository}</Text>
-        <Text dimColor>by</Text>
-        <Text color="magenta">{pr.author}</Text>
-        <Text dimColor>·</Text>
-        <Text dimColor>updated {timeAgo(pr.updatedAt)}</Text>
-      </Box>
-
-      {/* CI status */}
-      <Box gap={1} marginTop={0}>
-        <Text dimColor>ci:</Text>
-        <CIStatus status={pr.checkStatus} />
-      </Box>
-
-      {/* Diff stats */}
-      <Box gap={1} marginTop={0}>
-        <Text dimColor>diff:</Text>
-        <DiffStats pr={pr} />
-      </Box>
-
-      {/* Labels */}
-      {pr.labels.length > 0 && (
-        <Box gap={1} marginTop={0}>
-          <Text dimColor>labels:</Text>
-          {pr.labels.map((label) => (
-            <Text key={label} color="yellow">
-              {label}
-            </Text>
-          ))}
-        </Box>
-      )}
-
-      {/* Reviews */}
-      <Box flexDirection="column" marginTop={1}>
-        <Text dimColor underline>
-          Reviews
-        </Text>
-        <ReviewList reviews={pr.reviews} />
-      </Box>
-
-      {/* Comments count */}
-      {pr.comments > 0 && (
-        <Box marginTop={0}>
+    <Box flexDirection="column" paddingX={1} height={height} justifyContent="space-between">
+      <Box flexDirection="column">
+        {/* Header with counter */}
+        <Box marginBottom={1} gap={2}>
           <Text dimColor>
-            💬 {pr.comments} comment{pr.comments !== 1 ? "s" : ""}
+            Review {index + 1} of {total}
           </Text>
+          <FilterBar filters={filters} />
         </Box>
-      )}
 
-      {/* URL */}
-      <Box marginTop={1}>
-        <Text dimColor>{pr.url}</Text>
+        {/* Title and number */}
+        <Box gap={1}>
+          <Text bold color="cyan">
+            #{pr.number}
+          </Text>
+          <Text bold>{pr.title}</Text>
+          {pr.isDraft && <Text color="yellow">[DRAFT]</Text>}
+        </Box>
+
+        {/* Repository and author */}
+        <Box gap={1} marginTop={0}>
+          <Text dimColor>repo:</Text>
+          <Text color="blue">{pr.repository}</Text>
+          <Text dimColor>by</Text>
+          <Text color="magenta">{pr.author}</Text>
+          <Text dimColor>·</Text>
+          <Text dimColor>updated {timeAgo(pr.updatedAt)}</Text>
+        </Box>
+
+        {/* CI status */}
+        <Box gap={1} marginTop={0}>
+          <Text dimColor>ci:</Text>
+          <CIStatus status={pr.checkStatus} />
+        </Box>
+
+        {/* Diff stats */}
+        <Box gap={1} marginTop={0}>
+          <Text dimColor>diff:</Text>
+          <DiffStats pr={pr} />
+        </Box>
+
+        {/* Labels */}
+        {pr.labels.length > 0 && (
+          <Box gap={1} marginTop={0}>
+            <Text dimColor>labels:</Text>
+            {pr.labels.map((label) => (
+              <Text key={label} color="yellow">
+                {label}
+              </Text>
+            ))}
+          </Box>
+        )}
+
+        {/* Reviews */}
+        <Box flexDirection="column" marginTop={1}>
+          <Text dimColor underline>
+            Reviews
+          </Text>
+          <ReviewList reviews={pr.reviews} />
+        </Box>
+
+        {/* Comments count */}
+        {pr.comments > 0 && (
+          <Box marginTop={0}>
+            <Text dimColor>
+              💬 {pr.comments} comment{pr.comments !== 1 ? "s" : ""}
+            </Text>
+          </Box>
+        )}
+
+        {/* URL */}
+        <Box marginTop={1}>
+          <Text dimColor>{pr.url}</Text>
+        </Box>
       </Box>
 
-      {/* Actions help */}
-      <Box marginTop={1}>
+      {/* Actions help — pinned to bottom */}
+      <Box>
         <Text dimColor>
           a approve • m merge • b body • c comment • x request changes • d diff • k checkout • e editor • l claude • r refresh • s skip • o open • q quit
         </Text>
@@ -229,6 +234,8 @@ export function MergeConfirm({
   pr: PullRequest;
   strategy: "merge" | "squash" | "rebase";
 }) {
+  const { stdout } = useStdout();
+  const height = stdout?.rows ?? 24;
   const strategies = ["merge", "squash", "rebase"] as const;
   const ciWarning =
     pr.checkStatus === "FAILURE" || pr.checkStatus === "ERROR"
@@ -238,35 +245,37 @@ export function MergeConfirm({
         : null;
 
   return (
-    <Box flexDirection="column" paddingX={1}>
-      <Box gap={1} marginBottom={1}>
-        <Text bold color="cyan">
-          Merge #{pr.number}
-        </Text>
-        <Text bold>{pr.title}</Text>
-      </Box>
-
-      <Box gap={1}>
-        <Text dimColor>repo:</Text>
-        <Text color="blue">{pr.repository}</Text>
-      </Box>
-
-      {ciWarning && (
-        <Box marginTop={1}>
-          <Text color="yellow">{ciWarning}</Text>
-        </Box>
-      )}
-
-      <Box marginTop={1} gap={1}>
-        <Text dimColor>strategy:</Text>
-        {strategies.map((s, i) => (
-          <Text key={s} color={s === strategy ? "green" : undefined} bold={s === strategy}>
-            {i + 1}) {s}{s === strategy ? " ✓" : ""}
+    <Box flexDirection="column" paddingX={1} height={height} justifyContent="space-between">
+      <Box flexDirection="column">
+        <Box gap={1} marginBottom={1}>
+          <Text bold color="cyan">
+            Merge #{pr.number}
           </Text>
-        ))}
+          <Text bold>{pr.title}</Text>
+        </Box>
+
+        <Box gap={1}>
+          <Text dimColor>repo:</Text>
+          <Text color="blue">{pr.repository}</Text>
+        </Box>
+
+        {ciWarning && (
+          <Box marginTop={1}>
+            <Text color="yellow">{ciWarning}</Text>
+          </Box>
+        )}
+
+        <Box marginTop={1} gap={1}>
+          <Text dimColor>strategy:</Text>
+          {strategies.map((s, i) => (
+            <Text key={s} color={s === strategy ? "green" : undefined} bold={s === strategy}>
+              {i + 1}) {s}{s === strategy ? " ✓" : ""}
+            </Text>
+          ))}
+        </Box>
       </Box>
 
-      <Box marginTop={1}>
+      <Box>
         <Text dimColor>
           enter confirm • 1/2/3 strategy • esc cancel
         </Text>
@@ -313,7 +322,9 @@ export function DiffView({
   searchTerm?: string;
   searchInput?: string;
 }) {
-  const viewportHeight = Math.max(process.stdout.rows - 6, 10);
+  const { stdout } = useStdout();
+  const rows = stdout?.rows ?? 24;
+  const viewportHeight = Math.max(rows - 6, 10);
   const clampedOffset = Math.min(scrollOffset, Math.max(0, lines.length - viewportHeight));
   const visibleLines = lines.slice(clampedOffset, clampedOffset + viewportHeight);
 
@@ -333,51 +344,53 @@ export function DiffView({
   const currentFileName = totalFiles > 0 ? extractFileName(lines[fileIndices[currentFileIdx]]) : null;
 
   return (
-    <Box flexDirection="column" paddingX={1}>
-      <Box gap={1} marginBottom={0}>
-        <Text bold color="cyan">
-          #{pr.number}
-        </Text>
-        <Text bold>{pr.title}</Text>
-        <Text dimColor>
-          — line {clampedOffset + 1}/{lines.length}
-        </Text>
-      </Box>
-
-      <Box gap={1} marginBottom={1}>
-        {totalFiles > 0 && (
-          <>
-            <Text dimColor>file</Text>
-            <Text color="yellow">{currentFileIdx + 1}/{totalFiles}</Text>
-            <Text color="blue">{currentFileName}</Text>
-          </>
-        )}
-        {searchTerm && (
-          <>
-            <Text dimColor>search:</Text>
-            <Text color="yellow">"{searchTerm}"</Text>
-          </>
-        )}
-      </Box>
-
+    <Box flexDirection="column" paddingX={1} height={rows} justifyContent="space-between">
       <Box flexDirection="column">
-        {visibleLines.map((line, i) => (
-          <Box key={clampedOffset + i}>
-            <Text color={diffLineColor(line)}>
-              {line}
-            </Text>
-          </Box>
-        ))}
+        <Box gap={1} marginBottom={0}>
+          <Text bold color="cyan">
+            #{pr.number}
+          </Text>
+          <Text bold>{pr.title}</Text>
+          <Text dimColor>
+            — line {clampedOffset + 1}/{lines.length}
+          </Text>
+        </Box>
+
+        <Box gap={1} marginBottom={1}>
+          {totalFiles > 0 && (
+            <>
+              <Text dimColor>file</Text>
+              <Text color="yellow">{currentFileIdx + 1}/{totalFiles}</Text>
+              <Text color="blue">{currentFileName}</Text>
+            </>
+          )}
+          {searchTerm && (
+            <>
+              <Text dimColor>search:</Text>
+              <Text color="yellow">"{searchTerm}"</Text>
+            </>
+          )}
+        </Box>
+
+        <Box flexDirection="column">
+          {visibleLines.map((line, i) => (
+            <Box key={clampedOffset + i}>
+              <Text color={diffLineColor(line)}>
+                {line}
+              </Text>
+            </Box>
+          ))}
+        </Box>
       </Box>
 
       {searchInput !== undefined ? (
-        <Box marginTop={1}>
+        <Box>
           <Text color="cyan">/ </Text>
           <Text>{searchInput}</Text>
           <Text dimColor>▎</Text>
         </Box>
       ) : (
-        <Box marginTop={1}>
+        <Box>
           <Text dimColor>
             j/k scroll • space page down • ]/[ next/prev file • / search{searchTerm ? " • n/N next/prev match" : ""} • g top • G bottom • esc {searchTerm ? "clear search" : "back"}
           </Text>
@@ -396,31 +409,35 @@ export function BodyView({
   lines: string[];
   scrollOffset: number;
 }) {
-  const viewportHeight = Math.max(process.stdout.rows - 5, 10);
+  const { stdout } = useStdout();
+  const rows = stdout?.rows ?? 24;
+  const viewportHeight = Math.max(rows - 5, 10);
   const clampedOffset = Math.min(scrollOffset, Math.max(0, lines.length - viewportHeight));
   const visibleLines = lines.slice(clampedOffset, clampedOffset + viewportHeight);
 
   return (
-    <Box flexDirection="column" paddingX={1}>
-      <Box gap={1} marginBottom={1}>
-        <Text bold color="cyan">
-          #{pr.number}
-        </Text>
-        <Text bold>{pr.title}</Text>
-        <Text dimColor>
-          — line {clampedOffset + 1}/{lines.length}
-        </Text>
-      </Box>
-
+    <Box flexDirection="column" paddingX={1} height={rows} justifyContent="space-between">
       <Box flexDirection="column">
-        {visibleLines.map((line, i) => (
-          <Box key={clampedOffset + i}>
-            <Text>{line}</Text>
-          </Box>
-        ))}
+        <Box gap={1} marginBottom={1}>
+          <Text bold color="cyan">
+            #{pr.number}
+          </Text>
+          <Text bold>{pr.title}</Text>
+          <Text dimColor>
+            — line {clampedOffset + 1}/{lines.length}
+          </Text>
+        </Box>
+
+        <Box flexDirection="column">
+          {visibleLines.map((line, i) => (
+            <Box key={clampedOffset + i}>
+              <Text>{line}</Text>
+            </Box>
+          ))}
+        </Box>
       </Box>
 
-      <Box marginTop={1}>
+      <Box>
         <Text dimColor>
           j/k scroll • space page down • g top • G bottom • esc back
         </Text>
