@@ -197,7 +197,7 @@ export function PRContext({
       {/* Actions help */}
       <Box marginTop={1}>
         <Text dimColor>
-          a approve • c comment • x request changes • d diff • k checkout • e editor • l claude • s skip • o open • q quit
+          a approve • c comment • x request changes • d diff • k checkout • e editor • l claude • r refresh • s skip • o open • q quit
         </Text>
       </Box>
     </Box>

@@ -246,6 +246,24 @@ export function App() {
       advance(state.prs, state.current);
     }
 
+    if (input === "r") {
+      setState({ phase: "loading" });
+      fetchReviewRequests()
+        .then((prs) => {
+          if (prs.length === 0) {
+            setState({ phase: "empty" });
+          } else {
+            setState({ phase: "reviewing", prs, current: 0 });
+          }
+        })
+        .catch((err) => {
+          setState({
+            phase: "error",
+            message: err instanceof Error ? err.message : String(err),
+          });
+        });
+    }
+
     if (input === "a") {
       runAction(
         pr,
