@@ -1,4 +1,4 @@
-import { execFile, spawnSync } from "node:child_process";
+import { execFile, execFileSync, spawnSync } from "node:child_process";
 import { promisify } from "node:util";
 import type { PullRequest, Filters, SortField } from "./types.js";
 
@@ -59,8 +59,6 @@ async function gh(...args: string[]): Promise<string> {
 }
 
 export function checkAuth(): { authenticated: boolean; user?: string } {
-  // checkAuth stays synchronous since it runs at startup before the UI renders
-  const { execFileSync } = require("node:child_process");
   try {
     const status = execFileSync("gh", ["auth", "status"], {
       encoding: "utf-8",
