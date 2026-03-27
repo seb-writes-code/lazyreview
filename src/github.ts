@@ -34,6 +34,15 @@ query($cursor: String) {
           }
         }
         comments { totalCount }
+        commits(last: 1) {
+          nodes {
+            commit {
+              statusCheckRollup {
+                state
+              }
+            }
+          }
+        }
       }
     }
   }
@@ -193,6 +202,15 @@ function normalizePR(node: Record<string, unknown>): PullRequest {
     }>;
   } | null;
   const comments = node.comments as { totalCount: number } | null;
+  const commits = node.commits as {
+    nodes?: Array<{
+      commit: {
+        statusCheckRollup?: { state: string } | null;
+      };
+    }>;
+  } | null;
+  const checkState =
+    commits?.nodes?.[0]?.commit?.statusCheckRollup?.state ?? null;
 
   return {
     number: node.number as number,
@@ -216,5 +234,6 @@ function normalizePR(node: Record<string, unknown>): PullRequest {
         submittedAt: r.submittedAt,
       })),
     comments: comments?.totalCount ?? 0,
+    checkStatus: checkState as PullRequest["checkStatus"],
   };
 }

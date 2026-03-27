@@ -49,6 +49,20 @@ function reviewStateColor(
   }
 }
 
+function CIStatus({ status }: { status: PullRequest["checkStatus"] }) {
+  switch (status) {
+    case "SUCCESS":
+      return <Text color="green">✓ passing</Text>;
+    case "FAILURE":
+    case "ERROR":
+      return <Text color="red">✗ failing</Text>;
+    case "PENDING":
+      return <Text color="yellow">⏳ pending</Text>;
+    default:
+      return <Text dimColor>— no checks</Text>;
+  }
+}
+
 function DiffStats({ pr }: { pr: PullRequest }) {
   return (
     <Box gap={1}>
@@ -132,6 +146,12 @@ export function PRContext({
         <Text color="magenta">{pr.author}</Text>
         <Text dimColor>·</Text>
         <Text dimColor>updated {timeAgo(pr.updatedAt)}</Text>
+      </Box>
+
+      {/* CI status */}
+      <Box gap={1} marginTop={0}>
+        <Text dimColor>ci:</Text>
+        <CIStatus status={pr.checkStatus} />
       </Box>
 
       {/* Diff stats */}

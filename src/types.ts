@@ -14,6 +14,7 @@ export interface PullRequest {
   reviewDecision: string | null;
   reviews: Review[];
   comments: number;
+  checkStatus: "SUCCESS" | "FAILURE" | "PENDING" | "ERROR" | null;
 }
 
 export interface Review {
