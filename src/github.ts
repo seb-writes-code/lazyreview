@@ -1,6 +1,6 @@
 import { execFile, spawnSync } from "node:child_process";
 import { promisify } from "node:util";
-import type { PullRequest, Filters } from "./types.js";
+import type { PullRequest, Filters, SortField } from "./types.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -128,7 +128,29 @@ export async function fetchReviewRequests(filters?: Filters): Promise<PullReques
     cursor = search.pageInfo?.hasNextPage ? search.pageInfo.endCursor : null;
   } while (cursor);
 
-  return allPRs;
+  return sortPRs(allPRs, filters?.sort, filters?.reverse);
+}
+
+function sortPRs(prs: PullRequest[], sort?: SortField, reverse?: boolean): PullRequest[] {
+  if (!sort) return prs;
+  const sorted = [...prs];
+  const ciOrder: Record<string, number> = { SUCCESS: 0, PENDING: 1, ERROR: 3, FAILURE: 3 };
+  switch (sort) {
+    case "created":
+      sorted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      break;
+    case "updated":
+      sorted.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      break;
+    case "size":
+      sorted.sort((a, b) => (a.additions + a.deletions) - (b.additions + b.deletions));
+      break;
+    case "ci":
+      sorted.sort((a, b) => (ciOrder[a.checkStatus ?? ""] ?? 2) - (ciOrder[b.checkStatus ?? ""] ?? 2));
+      break;
+  }
+  if (reverse) sorted.reverse();
+  return sorted;
 }
 
 export async function checkoutPR(pr: PullRequest): Promise<void> {

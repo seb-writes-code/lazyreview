@@ -116,6 +116,7 @@ function FilterBar({ filters }: { filters?: Filters }) {
   if (filters?.repo) parts.push(`repo:${filters.repo}`);
   if (filters?.author) parts.push(`author:${filters.author}`);
   if (filters?.noDrafts) parts.push("no-drafts");
+  if (filters?.sort) parts.push(`sort:${filters.sort}${filters.reverse ? "↑" : ""}`);
   if (parts.length === 0) return null;
   return (
     <Box gap={1}>

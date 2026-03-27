@@ -18,10 +18,14 @@ export interface PullRequest {
   checkStatus: "SUCCESS" | "FAILURE" | "PENDING" | "ERROR" | null;
 }
 
+export type SortField = "updated" | "created" | "size" | "ci";
+
 export interface Filters {
   repo?: string;
   author?: string;
   noDrafts?: boolean;
+  sort?: SortField;
+  reverse?: boolean;
 }
 
 export interface Review {
