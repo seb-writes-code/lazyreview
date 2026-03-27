@@ -1,0 +1,24 @@
+{
+  "name": "lazyreview",
+  "version": "0.1.0",
+  "description": "Terminal-first tool for rapidly triaging and reviewing GitHub pull request review requests",
+  "type": "module",
+  "bin": {
+    "lazyreview": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/cli.js"
+  },
+  "dependencies": {
+    "chalk": "^5.4.1",
+    "ink": "^5.1.0",
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@types/react": "^18.3.18",
+    "typescript": "^5.7.3"
+  }
+}

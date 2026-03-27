@@ -4,30 +4,38 @@ Terminal-first tool for rapidly triaging and reviewing GitHub pull request revie
 
 ## Prerequisites
 
-- [Go](https://go.dev/dl/) 1.22+
-- [GitHub CLI](https://cli.github.com/) (`gh`) installed and authenticated
+- [Node.js](https://nodejs.org/) 18+
+- [GitHub CLI](https://cli.github.com/) (`gh`) authenticated via `gh auth login`
 
 ## Install
 
-```sh
-go install github.com/cmraible/lazyreview@latest
+```bash
+npm install
+npm run build
 ```
 
 ## Usage
 
-```sh
-lazyreview
+```bash
+node dist/cli.js
 ```
 
-The tool fetches your pending review requests and presents them one at a time. After each action, the next PR appears immediately.
-
-### Key bindings
+### Keyboard shortcuts
 
 | Key | Action |
 |-----|--------|
-| `a` | Approve the current PR |
-| `c` | Comment on the current PR |
-| `x` | Request changes on the current PR |
-| `s` | Skip to the next PR |
-| `o` | Open in browser |
-| `q` | Quit |
+| `n` / `→` / `↓` | Next PR |
+| `p` / `←` / `↑` | Previous PR |
+| `q` / `Esc` | Quit |
+
+## What it shows
+
+For each pending review request:
+
+- PR title and number
+- Repository and author
+- Diff stats (+additions, -deletions, changed files)
+- Labels
+- Review status per reviewer (approved, changes requested, commented)
+- Comment count
+- Link to the PR on GitHub
