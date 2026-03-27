@@ -26,6 +26,12 @@ node dist/cli.js
 |-----|--------|
 | `n` / `→` / `↓` | Next PR |
 | `p` / `←` / `↑` | Previous PR |
+| `a` | Approve |
+| `c` | Comment |
+| `x` | Request changes |
+| `l` | Launch Claude Code session |
+| `o` | Open in browser |
+| `s` | Skip |
 | `q` / `Esc` | Quit |
 
 ## What it shows

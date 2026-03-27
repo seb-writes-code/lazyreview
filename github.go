@@ -155,3 +155,44 @@ func openInBrowser(pr PullRequest) error {
 	)
 	return cmd.Run()
 }
+
+// launchClaudeCode starts an interactive Claude Code session with context about the given PR.
+func launchClaudeCode(pr PullRequest, question string) error {
+	prompt := fmt.Sprintf(
+		"You are reviewing a GitHub pull request.\n\n"+
+			"PR: %s\n"+
+			"Repo: %s\n"+
+			"Author: %s\n"+
+			"Branch: %s → %s\n"+
+			"URL: %s\n"+
+			"Changes: +%d -%d\n\n"+
+			"%s\n\n"+
+			"The user's question: %s\n\n"+
+			"Please use `gh` to examine the PR diff and answer the question.",
+		pr.Title, pr.Repo, pr.Author,
+		pr.HeadRef, pr.BaseRef, pr.URL,
+		pr.Additions, pr.Deletions,
+		descriptionContext(pr.Body),
+		question,
+	)
+
+	cmd := exec.Command("claude", "--print", "--prompt", prompt)
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	cmd.Stdin = nil
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("claude code failed: %w\n%s", err, string(out))
+	}
+	return nil
+}
+
+func descriptionContext(body string) string {
+	if body == "" {
+		return ""
+	}
+	if len(body) > 1000 {
+		body = body[:1000] + "…"
+	}
+	return "Description:\n" + body
+}

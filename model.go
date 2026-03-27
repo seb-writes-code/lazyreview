@@ -18,6 +18,7 @@ const (
 	stateReview
 	stateComment
 	stateRequestChanges
+	stateClaudeCode
 	stateEmpty
 	stateError
 	stateActionDone
@@ -148,6 +149,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.updateComment(msg)
 	case stateRequestChanges:
 		return m.updateRequestChanges(msg)
+	case stateClaudeCode:
+		return m.updateClaudeCode(msg)
 	case stateActionDone:
 		return m.updateActionDone(msg)
 	case stateError:
@@ -203,6 +206,12 @@ func (m model) updateReview(msg tea.Msg) (tea.Model, tea.Cmd) {
 			pr := m.currentPR()
 			_ = openInBrowser(pr)
 			return m, nil
+		case "l":
+			m.state = stateClaudeCode
+			m.textInput.SetValue("")
+			m.textInput.Placeholder = "Ask Claude about this PR..."
+			m.textInput.Focus()
+			return m, textinput.Blink
 		}
 	}
 	return m, nil
@@ -255,6 +264,36 @@ func (m model) updateRequestChanges(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return errMsg{err}
 				}
 				return actionDoneMsg{fmt.Sprintf("Requested changes on %s#%d", pr.Repo, pr.Number)}
+			}
+		}
+	}
+
+	var cmd tea.Cmd
+	m.textInput, cmd = m.textInput.Update(msg)
+	return m, cmd
+}
+
+func (m model) updateClaudeCode(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		switch keyMsg.String() {
+		case "escape":
+			m.state = stateReview
+			m.textInput.Placeholder = "Enter your comment..."
+			return m, nil
+		case "enter":
+			question := m.textInput.Value()
+			if strings.TrimSpace(question) == "" {
+				m.state = stateReview
+				m.textInput.Placeholder = "Enter your comment..."
+				return m, nil
+			}
+			pr := m.currentPR()
+			m.state = stateLoading
+			return m, func() tea.Msg {
+				if err := launchClaudeCode(pr, question); err != nil {
+					return errMsg{err}
+				}
+				return actionDoneMsg{fmt.Sprintf("Claude Code answered question on %s#%d", pr.Repo, pr.Number)}
 			}
 		}
 	}
@@ -321,6 +360,9 @@ func (m model) View() string {
 
 	case stateRequestChanges:
 		return m.viewTextInput("Request changes")
+
+	case stateClaudeCode:
+		return m.viewTextInput("Ask Claude Code")
 	}
 
 	return ""
@@ -358,7 +400,7 @@ func (m model) viewReview() string {
 	b.WriteString("\n")
 
 	// Actions
-	b.WriteString("  " + helpStyle.Render("a approve • c comment • x request changes • s skip • o open in browser • q quit") + "\n")
+	b.WriteString("  " + helpStyle.Render("a approve • c comment • x request changes • l claude code • s skip • o open • q quit") + "\n")
 
 	return b.String()
 }

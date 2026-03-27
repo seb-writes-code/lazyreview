@@ -1,5 +1,8 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, execFile } from "node:child_process";
+import { promisify } from "node:util";
 import type { PullRequest } from "./types.js";
+
+const execFileAsync = promisify(execFile);
 
 const REVIEW_REQUESTS_QUERY = `
 query {
@@ -86,4 +89,33 @@ export function fetchReviewRequests(): PullRequest[] {
       comments: (node.comments as Record<string, number>).totalCount,
     })
   );
+}
+
+export async function launchClaudeCode(
+  pr: PullRequest,
+  question: string
+): Promise<string> {
+  const body =
+    pr.repository && pr.repository.length > 0
+      ? `\nDescription:\n${pr.repository}\n`
+      : "";
+
+  const prompt = [
+    `You are reviewing a GitHub pull request.`,
+    ``,
+    `PR: ${pr.title}`,
+    `Repo: ${pr.repository}`,
+    `Author: ${pr.author}`,
+    `URL: ${pr.url}`,
+    `Changes: +${pr.additions} -${pr.deletions} across ${pr.changedFiles} files`,
+    body,
+    `The user's question: ${question}`,
+    ``,
+    `Please use \`gh\` to examine the PR diff and answer the question.`,
+  ].join("\n");
+
+  const { stdout } = await execFileAsync("claude", ["--print", "--prompt", prompt], {
+    timeout: 300_000,
+  });
+  return stdout;
 }

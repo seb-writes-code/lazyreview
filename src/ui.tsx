@@ -173,6 +173,13 @@ export function PRContext({
       <Box marginTop={1}>
         <Text dimColor>{pr.url}</Text>
       </Box>
+
+      {/* Help */}
+      <Box marginTop={1}>
+        <Text dimColor>
+          n next • p prev • l claude code • o open • q quit
+        </Text>
+      </Box>
     </Box>
   );
 }
