@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text, useApp, useInput } from "ink";
-import { PRContext, Loading, Empty, AuthError, ActionStatus, DiffView } from "./ui.js";
+import { PRContext, Loading, Empty, AuthError, ActionStatus, DiffView, BodyView } from "./ui.js";
 import {
   checkAuth,
   fetchReviewRequests,
@@ -37,6 +37,13 @@ type AppState =
     }
   | {
       phase: "diff";
+      prs: PullRequest[];
+      current: number;
+      lines: string[];
+      scrollOffset: number;
+    }
+  | {
+      phase: "body";
       prs: PullRequest[];
       current: number;
       lines: string[];
@@ -158,8 +165,8 @@ export function App() {
       return;
     }
 
-    // Handle diff view (scrollable)
-    if (state.phase === "diff") {
+    // Handle scrollable views (diff and body)
+    if (state.phase === "diff" || state.phase === "body") {
       if (key.escape || input === "q") {
         setState({
           phase: "reviewing",
@@ -326,6 +333,17 @@ export function App() {
         });
     }
 
+    if (input === "b") {
+      const body = pr.body.trim() || "No description provided.";
+      setState({
+        phase: "body",
+        prs: state.prs,
+        current: state.current,
+        lines: body.split("\n"),
+        scrollOffset: 0,
+      });
+    }
+
     if (input === "o") {
       openInBrowser(pr);
     }
@@ -400,6 +418,14 @@ export function App() {
     case "diff":
       return (
         <DiffView
+          pr={state.prs[state.current]}
+          lines={state.lines}
+          scrollOffset={state.scrollOffset}
+        />
+      );
+    case "body":
+      return (
+        <BodyView
           pr={state.prs[state.current]}
           lines={state.lines}
           scrollOffset={state.scrollOffset}

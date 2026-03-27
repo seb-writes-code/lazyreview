@@ -2,6 +2,7 @@ export interface PullRequest {
   number: number;
   title: string;
   url: string;
+  body: string;
   repository: string;
   author: string;
   createdAt: string;

@@ -16,6 +16,7 @@ query($cursor: String) {
         number
         title
         url
+        body
         createdAt
         updatedAt
         additions
@@ -216,6 +217,7 @@ function normalizePR(node: Record<string, unknown>): PullRequest {
     number: node.number as number,
     title: node.title as string,
     url: node.url as string,
+    body: (node.body as string) ?? "",
     repository: repo?.nameWithOwner ?? "unknown",
     author: author?.login ?? "unknown",
     createdAt: node.createdAt as string,
