@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -51,6 +52,22 @@ func checkGHAuth() error {
 		return fmt.Errorf("gh auth check failed: %s\n%s", err, string(out))
 	}
 	return nil
+}
+
+// ghAuthLoginCmd returns an exec.Cmd for `gh auth login` with the web flow.
+// This is used with bubbletea's ExecProcess to hand control of the terminal
+// to the gh CLI during authentication.
+func ghAuthLoginCmd() *exec.Cmd {
+	return exec.Command("gh", "auth", "login", "--web", "--scopes", "repo,read:org")
+}
+
+// runGHAuthLogin runs `gh auth login` interactively (non-TUI fallback).
+func runGHAuthLogin() error {
+	cmd := ghAuthLoginCmd()
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 // currentUser returns the authenticated GitHub username.

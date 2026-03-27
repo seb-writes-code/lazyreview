@@ -14,7 +14,10 @@ import (
 type state int
 
 const (
-	stateLoading state = iota
+	stateAuthCheck state = iota
+	stateAuthRequired
+	stateAuthInProgress
+	stateLoading
 	stateReview
 	stateComment
 	stateRequestChanges
@@ -24,6 +27,9 @@ const (
 )
 
 // Messages
+type authCheckedMsg struct{ user string }
+type authRequiredMsg struct{}
+type authCompleteMsg struct{ user string }
 type prsLoadedMsg struct{ prs []PullRequest }
 type errMsg struct{ err error }
 type actionDoneMsg struct{ message string }
@@ -63,6 +69,7 @@ var (
 
 type model struct {
 	state      state
+	user       string // authenticated GitHub username
 	prs        []PullRequest
 	index      int
 	spinner    spinner.Model
@@ -83,20 +90,28 @@ func newModel() model {
 	ti.Width = 80
 
 	return model{
-		state:     stateLoading,
+		state:     stateAuthCheck,
 		spinner:   s,
 		textInput: ti,
 	}
 }
 
 func (m model) Init() tea.Cmd {
-	return tea.Batch(m.spinner.Tick, loadPRs)
+	return tea.Batch(m.spinner.Tick, checkAuth)
+}
+
+func checkAuth() tea.Msg {
+	if err := checkGHAuth(); err != nil {
+		return authRequiredMsg{}
+	}
+	user, err := currentUser()
+	if err != nil {
+		return authRequiredMsg{}
+	}
+	return authCheckedMsg{user: user}
 }
 
 func loadPRs() tea.Msg {
-	if err := checkGHAuth(); err != nil {
-		return errMsg{err}
-	}
 	prs, err := fetchReviewRequests()
 	if err != nil {
 		return errMsg{err}
@@ -114,6 +129,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		return m, nil
+
+	case authCheckedMsg:
+		m.user = msg.user
+		m.state = stateLoading
+		return m, loadPRs
+
+	case authRequiredMsg:
+		m.state = stateAuthRequired
+		return m, nil
+
+	case authCompleteMsg:
+		m.user = msg.user
+		m.state = stateLoading
+		return m, loadPRs
 
 	case prsLoadedMsg:
 		m.prs = msg.prs
@@ -142,6 +171,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch m.state {
+	case stateAuthRequired:
+		return m.updateAuthRequired(msg)
 	case stateReview:
 		return m.updateReview(msg)
 	case stateComment:
@@ -167,6 +198,31 @@ func (m model) advance() (model, tea.Cmd) {
 		m.index = 0
 	}
 	m.state = stateReview
+	return m, nil
+}
+
+func (m model) updateAuthRequired(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if keyMsg, ok := msg.(tea.KeyMsg); ok {
+		switch keyMsg.String() {
+		case "q", "ctrl+c":
+			return m, tea.Quit
+		case "l":
+			m.state = stateAuthInProgress
+			return m, tea.Batch(m.spinner.Tick, tea.ExecProcess(
+				ghAuthLoginCmd(),
+				func(err error) tea.Msg {
+					if err != nil {
+						return errMsg{fmt.Errorf("login failed: %w", err)}
+					}
+					user, err := currentUser()
+					if err != nil {
+						return errMsg{fmt.Errorf("login succeeded but could not get user: %w", err)}
+					}
+					return authCompleteMsg{user: user}
+				},
+			))
+		}
+	}
 	return m, nil
 }
 
@@ -294,6 +350,19 @@ func (m model) updateError(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	switch m.state {
+	case stateAuthCheck:
+		return fmt.Sprintf("\n  %s Checking GitHub authentication...\n", m.spinner.View())
+
+	case stateAuthRequired:
+		return fmt.Sprintf("\n  %s\n\n  %s\n\n  %s\n",
+			errorStyle.Render("GitHub CLI is not authenticated."),
+			"  lazyreview uses the GitHub CLI (gh) for authentication.",
+			helpStyle.Render("l log in with GitHub • q quit"),
+		)
+
+	case stateAuthInProgress:
+		return fmt.Sprintf("\n  %s Logging in to GitHub...\n", m.spinner.View())
+
 	case stateLoading:
 		return fmt.Sprintf("\n  %s Fetching review requests...\n", m.spinner.View())
 
