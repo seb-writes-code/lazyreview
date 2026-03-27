@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text, useApp, useInput } from "ink";
-import { PRContext, Loading, Empty, AuthError, ActionStatus } from "./ui.js";
+import { PRContext, Loading, Empty, AuthError, ActionStatus, DiffView } from "./ui.js";
 import {
   checkAuth,
   fetchReviewRequests,
+  fetchDiff,
   checkoutPR,
   approvePR,
   commentOnPR,
@@ -33,6 +34,13 @@ type AppState =
       current: number;
       action: "comment" | "request_changes";
       value: string;
+    }
+  | {
+      phase: "diff";
+      prs: PullRequest[];
+      current: number;
+      lines: string[];
+      scrollOffset: number;
     };
 
 export function App() {
@@ -150,6 +158,48 @@ export function App() {
       return;
     }
 
+    // Handle diff view (scrollable)
+    if (state.phase === "diff") {
+      if (key.escape || input === "q") {
+        setState({
+          phase: "reviewing",
+          prs: state.prs,
+          current: state.current,
+        });
+        return;
+      }
+      if (input === "j" || key.downArrow) {
+        setState({ ...state, scrollOffset: state.scrollOffset + 1 });
+        return;
+      }
+      if (input === "k" || key.upArrow) {
+        setState({
+          ...state,
+          scrollOffset: Math.max(0, state.scrollOffset - 1),
+        });
+        return;
+      }
+      // Page down with space
+      if (input === " ") {
+        setState({ ...state, scrollOffset: state.scrollOffset + 20 });
+        return;
+      }
+      // Home / top
+      if (input === "g") {
+        setState({ ...state, scrollOffset: 0 });
+        return;
+      }
+      // End / bottom
+      if (input === "G") {
+        setState({
+          ...state,
+          scrollOffset: Math.max(0, state.lines.length - 20),
+        });
+        return;
+      }
+      return;
+    }
+
     // Handle action done screen
     if (state.phase === "action") {
       if (input === "q") {
@@ -238,6 +288,26 @@ export function App() {
       );
     }
 
+    if (input === "d") {
+      setState({ phase: "loading" });
+      fetchDiff(pr)
+        .then((diff) => {
+          setState({
+            phase: "diff",
+            prs: state.prs,
+            current: state.current,
+            lines: diff.split("\n"),
+            scrollOffset: 0,
+          });
+        })
+        .catch((err) => {
+          setState({
+            phase: "error",
+            message: err instanceof Error ? err.message : String(err),
+          });
+        });
+    }
+
     if (input === "o") {
       openInBrowser(pr);
     }
@@ -308,6 +378,14 @@ export function App() {
             <Text dimColor>enter submit • esc cancel</Text>
           </Box>
         </Box>
+      );
+    case "diff":
+      return (
+        <DiffView
+          pr={state.prs[state.current]}
+          lines={state.lines}
+          scrollOffset={state.scrollOffset}
+        />
       );
     case "reviewing":
       return (

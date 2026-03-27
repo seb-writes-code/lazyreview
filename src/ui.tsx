@@ -177,7 +177,7 @@ export function PRContext({
       {/* Actions help */}
       <Box marginTop={1}>
         <Text dimColor>
-          a approve • c comment • x request changes • k checkout • e editor • l claude • s skip • o open • q quit
+          a approve • c comment • x request changes • d diff • k checkout • e editor • l claude • s skip • o open • q quit
         </Text>
       </Box>
     </Box>
@@ -192,6 +192,57 @@ export function ActionStatus({ message }: { message: string }) {
       </Box>
       <Box marginTop={1}>
         <Text dimColor>Press any key to continue • q quit</Text>
+      </Box>
+    </Box>
+  );
+}
+
+function diffLineColor(line: string): "green" | "red" | "cyan" | "white" {
+  if (line.startsWith("+")) return "green";
+  if (line.startsWith("-")) return "red";
+  if (line.startsWith("@@") || line.startsWith("diff ") || line.startsWith("index ")) return "cyan";
+  return "white";
+}
+
+export function DiffView({
+  pr,
+  lines,
+  scrollOffset,
+}: {
+  pr: PullRequest;
+  lines: string[];
+  scrollOffset: number;
+}) {
+  const viewportHeight = Math.max(process.stdout.rows - 5, 10);
+  const clampedOffset = Math.min(scrollOffset, Math.max(0, lines.length - viewportHeight));
+  const visibleLines = lines.slice(clampedOffset, clampedOffset + viewportHeight);
+
+  return (
+    <Box flexDirection="column" paddingX={1}>
+      <Box gap={1} marginBottom={1}>
+        <Text bold color="cyan">
+          #{pr.number}
+        </Text>
+        <Text bold>{pr.title}</Text>
+        <Text dimColor>
+          — line {clampedOffset + 1}/{lines.length}
+        </Text>
+      </Box>
+
+      <Box flexDirection="column">
+        {visibleLines.map((line, i) => (
+          <Box key={clampedOffset + i}>
+            <Text color={diffLineColor(line)}>
+              {line}
+            </Text>
+          </Box>
+        ))}
+      </Box>
+
+      <Box marginTop={1}>
+        <Text dimColor>
+          j/k scroll • space page down • g top • G bottom • esc back
+        </Text>
       </Box>
     </Box>
   );

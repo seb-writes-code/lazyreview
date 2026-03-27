@@ -106,6 +106,10 @@ export async function checkoutPR(pr: PullRequest): Promise<void> {
   await gh("pr", "checkout", String(pr.number), "--repo", pr.repository);
 }
 
+export async function fetchDiff(pr: PullRequest): Promise<string> {
+  return gh("pr", "diff", String(pr.number), "--repo", pr.repository);
+}
+
 export async function approvePR(pr: PullRequest): Promise<void> {
   await gh(
     "pr",
