@@ -147,6 +147,18 @@ func requestChanges(pr PullRequest, body string) error {
 	return nil
 }
 
+// checkoutPR checks out the pull request branch locally.
+func checkoutPR(pr PullRequest) error {
+	cmd := exec.Command("gh", "pr", "checkout", fmt.Sprintf("%d", pr.Number),
+		"--repo", pr.Repo,
+	)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("checkout failed: %s\n%s", err, string(out))
+	}
+	return nil
+}
+
 // openInBrowser opens the PR URL in the default browser.
 func openInBrowser(pr PullRequest) error {
 	cmd := exec.Command("gh", "pr", "view", fmt.Sprintf("%d", pr.Number),

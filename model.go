@@ -26,7 +26,10 @@ const (
 // Messages
 type prsLoadedMsg struct{ prs []PullRequest }
 type errMsg struct{ err error }
-type actionDoneMsg struct{ message string }
+type actionDoneMsg struct {
+	message string
+	advance bool // whether to advance to the next PR after dismissal
+}
 
 // Styles
 var (
@@ -62,15 +65,16 @@ var (
 )
 
 type model struct {
-	state      state
-	prs        []PullRequest
-	index      int
-	spinner    spinner.Model
-	textInput  textinput.Model
-	err        error
-	message    string // transient status message
-	width      int
-	height     int
+	state         state
+	prs           []PullRequest
+	index         int
+	spinner       spinner.Model
+	textInput     textinput.Model
+	err           error
+	message       string // transient status message
+	shouldAdvance bool   // whether actionDone should advance to next PR
+	width         int
+	height        int
 }
 
 func newModel() model {
@@ -132,6 +136,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case actionDoneMsg:
 		m.message = msg.message
+		m.shouldAdvance = msg.advance
 		m.state = stateActionDone
 		return m, nil
 
@@ -182,7 +187,7 @@ func (m model) updateReview(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if err := approvePR(pr); err != nil {
 					return errMsg{err}
 				}
-				return actionDoneMsg{fmt.Sprintf("Approved %s#%d", pr.Repo, pr.Number)}
+				return actionDoneMsg{fmt.Sprintf("Approved %s#%d", pr.Repo, pr.Number), true}
 			}
 		case "c":
 			m.state = stateComment
@@ -203,6 +208,15 @@ func (m model) updateReview(msg tea.Msg) (tea.Model, tea.Cmd) {
 			pr := m.currentPR()
 			_ = openInBrowser(pr)
 			return m, nil
+		case "k":
+			pr := m.currentPR()
+			m.state = stateLoading
+			return m, func() tea.Msg {
+				if err := checkoutPR(pr); err != nil {
+					return errMsg{err}
+				}
+				return actionDoneMsg{fmt.Sprintf("Checked out %s#%d → %s", pr.Repo, pr.Number, pr.HeadRef), false}
+			}
 		}
 	}
 	return m, nil
@@ -226,7 +240,7 @@ func (m model) updateComment(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if err := commentOnPR(pr, body); err != nil {
 					return errMsg{err}
 				}
-				return actionDoneMsg{fmt.Sprintf("Commented on %s#%d", pr.Repo, pr.Number)}
+				return actionDoneMsg{fmt.Sprintf("Commented on %s#%d", pr.Repo, pr.Number), true}
 			}
 		}
 	}
@@ -254,7 +268,7 @@ func (m model) updateRequestChanges(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if err := requestChanges(pr, body); err != nil {
 					return errMsg{err}
 				}
-				return actionDoneMsg{fmt.Sprintf("Requested changes on %s#%d", pr.Repo, pr.Number)}
+				return actionDoneMsg{fmt.Sprintf("Requested changes on %s#%d", pr.Repo, pr.Number), true}
 			}
 		}
 	}
@@ -270,10 +284,14 @@ func (m model) updateActionDone(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c":
 			return m, tea.Quit
 		default:
-			// Any key advances to the next PR
-			var cmd tea.Cmd
-			m, cmd = m.advance()
-			return m, cmd
+			if m.shouldAdvance {
+				var cmd tea.Cmd
+				m, cmd = m.advance()
+				return m, cmd
+			}
+			// Return to the same PR (e.g. after checkout)
+			m.state = stateReview
+			return m, nil
 		}
 	}
 	return m, nil
@@ -358,7 +376,7 @@ func (m model) viewReview() string {
 	b.WriteString("\n")
 
 	// Actions
-	b.WriteString("  " + helpStyle.Render("a approve • c comment • x request changes • s skip • o open in browser • q quit") + "\n")
+	b.WriteString("  " + helpStyle.Render("a approve • c comment • x request changes • k checkout • s skip • o open in browser • q quit") + "\n")
 
 	return b.String()
 }
